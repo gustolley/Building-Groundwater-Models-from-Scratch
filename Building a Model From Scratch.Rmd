@@ -1,0 +1,65 @@
+---
+title: "Building MODFLOW Models From Scratch"
+output: word_document
+always_allow_html: TRUE
+---
+```{r setup, echo = FALSE}
+knitr::opts_chunk$set(echo = TRUE, results = 'hide', warning=FALSE, message=FALSE)
+```
+```{r load_packages}
+# Required R Packages
+library(dplyr)
+library(ggplot2)
+library(imager)
+library(readxl)
+library(mapview)
+library(mapedit)
+library(raster)
+library(sf)
+library(rmapshaper)
+```
+
+# Introduction
+
+The purpose of this exercise is to show you how to build the input files required for a numerical groundwater model in MODFLOW. *_This exercise will be using Groundwater Vistas (GWVs)_*. You will learn different sources for obtaining data, how to create shapefiles meaningful to a groundwater-surface-water model, and how to import these shapefiles into GWVs. *_You will need to have QGIS with GRASS installed. You can download it here: https://qgis.org/en/site/forusers/download.html. Use the OSGeo4W Network Installer if you are using Windows._*
+
+# Exercise 1 – Extract Elevation Data
+
+Go to the [USGS National Map Viewer](http://viewer.nationalmap.gov/) and click on the Download GIS Data link.
+
+```{r fig.width=8.5, echo=FALSE, results='markup'}
+knitr::include_graphics('./Figures_for_Exercise_doc/TNM_overview.png')
+```
+
+Select the Elevation Products (3DEP) box, then 1/3
+arc-second DEM (DEM = digital elevation model). This corresponds to elevation data that has about  10m spatial resolution. Zoom to the Scott Valley in Northern California. The DEM is available as a georeferenced .tif file.
+
+To select data to download, click on the button that has a little square on the left side of the map window and draw a box around the Scott Valley. Make sure it is large enough that you get all the flat areas of the valley. It is better to make your box a little bigger so you don’t have to come back and download data again later. After you have defined the area you want data for, select the Find Products button. Data from selected categories that fall into your window are displayed and can be downloaded.
+
+```{r fig.width=8.5, echo = FALSE, results='markup'}
+knitr::include_graphics('./Figures_for_Exercise_doc/TNM_download.png')
+```
+
+DEM files can be rather large, so we have already downloaded the data for you. It is located in the 'Data' folder.
+
+```{r}
+DEM = raster('./Data/USGS_13_n42w123.tif')               # import DEM
+#DEM_mask = mapview(DEM) %>% editMap()                    # draw shapefile for masking raster
+#DEM_mask = st_transform(DEM_mask$finished, st_crs(DEM))  # reproject shapefile to DEM coordinate system
+#DEM_masked = mask(DEM, DEM_mask)                         # mask DEM
+#writeRaster(DEM_masked, filename = './HYD_274_Model_Development_Exercise_Completed/DEM_masked.tif', overwrite = TRUE)  # export masked raster
+DEM_masked = raster('./HYD_274_Model_Development_Exercise_Completed/DEM_masked.tif')
+mapview(DEM_masked)                                      # view masked raster
+slope = terrain(DEM_masked, opt = 'slope', unit = 'degrees') #create slope raste from masked DEM
+mapview(slope)
+basin_outline = st_read('./HYD_274_Model_Development_Exercise_Completed/contour_5deg_extr.shp')# view slope raster
+
+basin_outline_simple = ms_simplify(basin_outline, keep = 0.01)
+basin_outline_smooth = smoothr::smooth(x = basin_outline, method = 'chaikin', refinements = 10)
+
+
+```
+
+
+
+
